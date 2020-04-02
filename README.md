@@ -19,7 +19,7 @@ sudo apt-get install gobuster
 
 ## Usage
 
-```python3
+```bash
 λ O72 Desktop → python3 ezHTB.py -h
 usage: ezHTB.py [options] box_name box_ip_address
 
