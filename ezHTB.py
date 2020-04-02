@@ -60,12 +60,23 @@ def etc_hosts(box_name, box_ip_address):
     so that it can be accessed via hostname.
     :param box_name: the name of the box
     :param box_ip_address: the ip of the box
+    :return null
     """
+    IN_THERE = False
     if APPEND_HOSTS:
         try:
+            with open("/etc/hosts", "r") as f:
+                for line in f:
+                    line = line.split()
+                    if line:
+                        if line[0] == box_ip_address:
+                            IN_THERE = True
+                            break
             with open("/etc/hosts", "a") as f:
-                f.write("\n" + box_ip_address + "\t" + box_name.lower() + ".htb ")
-
+                if IN_THERE:
+                    print("|-| The ip address is already in the /etc/hosts ")
+                else:
+                    f.write("\n" + box_ip_address + "\t" + box_name.lower() + ".htb ")
         except PermissionError as skip:
             print("|-| Insufficient permissions: could not write to /etc/hosts")
 
@@ -89,7 +100,7 @@ def start_nmap(box_name, box_ip_address, quick, maximum):
                             stdout=subprocess.DEVNULL)
         else:
             subprocess.call([NMAP_BIN_LOC, "-sC", "-sV", "-oN", output, box_ip_address], stdout=subprocess.DEVNULL)
-        print("|+| nmap scan complete")
+        print("|+| Nmap scan complete")
     except Exception as skip:
         print("|-| Failed to initiate nmap")
         print(skip)
@@ -151,7 +162,7 @@ def main(args):
     nmap = Process(target=start_nmap, args=(args.box_name, args.box_ip_address, args.quick, args.maximum))
     nmap.start()
 
-    print("|+| starting gobuster")
+    print("|+| Starting gobuster")
     if args.quick:
         if check_port(args.box_ip_address, 80) and not args.https or \
                 check_port(args.box_ip_address, 443) and args.https:
