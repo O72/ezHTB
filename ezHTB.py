@@ -11,12 +11,10 @@ OUTPUT_DIR = "/root/Desktop/test/"
 OUTPUT_NMAP = "/nmap.txt"
 OUTPUT_GOBUSTER = "/gobuster.txt"
 
-# DIR_SMALL = "/usr/share/dirbuster/wordlists/directory-list-2.3-small.txt"
 DIR_COMMON = "/root/Desktop/HackTheBox/common_dir.txt"
 DIR_SMALL = "/root/Desktop/test.txt"
-DIR_SMALL_LOWER = "/usr/share/dirbuster/wordlists/directory-list-lowercase-2.3-small.txt"
+# DIR_SMALL = "/usr/share/dirbuster/wordlists/directory-list-2.3-small.txt"
 DIR_MEDIUM = "/usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt"
-DIR_MEDIUM_LOWER = "/usr/share/dirbuster/wordlists/directory-list-lowercase-2.3-medium.txt"
 
 APPEND_HOSTS = True
 
@@ -37,7 +35,7 @@ def init(box_name):
     except FileExistsError as skip:
         print("|-| Skipping: directory already exists")
 
-    f = Path(OUTPUT_DIR + box_name + OUTPUT_DIR_NMAP)
+    f = Path(OUTPUT_DIR + box_name + OUTPUT_NMAP)
     if not os.path.exists(os.path.dirname(f)):
         try:
             os.makedirs(os.path.dirname(f))
@@ -46,7 +44,7 @@ def init(box_name):
                 raise
             print("|-| Skipping: file already exists")
 
-    f = Path(OUTPUT_DIR + box_name + OUTPUT_DIR_GOBUSTER)
+    f = Path(OUTPUT_DIR + box_name + OUTPUT_GOBUSTER)
     if not os.path.exists(os.path.dirname(f)):
         try:
             os.makedirs(os.path.dirname(f))
@@ -82,7 +80,7 @@ def start_nmap(box_name, box_ip_address, quick, maximum):
     :param maximum: does nmap scan for all the ports with -c or --all
     """
     try:
-        output = OUTPUT_DIR + box_name + OUTPUT_DIR_NMAP
+        output = OUTPUT_DIR + box_name + OUTPUT_NMAP
 
         if quick:
             subprocess.call([NMAP_BIN_LOC, "-Pn", "-sV", "-oN", output, box_ip_address], stdout=subprocess.DEVNULL)
@@ -111,7 +109,7 @@ def start_gobuster(box_name, box_ip_address, wordlist, force_https):
         url = "https://"
 
     try:
-        output = OUTPUT_DIR + box_name + OUTPUT_DIR_GOBUSTER
+        output = OUTPUT_DIR + box_name + OUTPUT_GOBUSTER
         subprocess.call([GOBUSTER_BIN_LOC, "dir", "-w", wordlist, "-z", "-q", "-x", ".php", "-o", output, "-u", url
                          + box_ip_address], stdout=subprocess.DEVNULL)
         print("|+| Gobuster scan complete")
@@ -151,7 +149,6 @@ def main(args):
 
     print("|+| Starting nmap")
     nmap = Process(target=start_nmap, args=(args.box_name, args.box_ip_address, args.quick, args.maximum))
-    nmap.daemon = True
     nmap.start()
 
     print("|+| starting gobuster")
@@ -160,7 +157,6 @@ def main(args):
                 check_port(args.box_ip_address, 443) and args.https:
             gobuster = Process(target=start_gobuster,
                                args=(args.box_name, args.box_ip_address, DIR_SMALL, args.https))
-            gobuster.daemon = True
             gobuster.start()
         else:
             print("|-| Failed to start Gobuster: ports closed")
@@ -169,7 +165,6 @@ def main(args):
                 check_port(args.box_ip_address, 443) and args.https:
             gobuster = Process(target=start_gobuster,
                                args=(args.box_name, args.box_ip_address, DIR_MEDIUM, args.https))
-            gobuster.daemon = True
             gobuster.start()
         else:
             print("|-| Failed to start Gobuster: ports closed")
@@ -178,7 +173,6 @@ def main(args):
                 or check_port(args.box_ip_address, 443) and args.https:
             gobuster = Process(target=start_gobuster,
                                args=(args.box_name, args.box_ip_address, DIR_COMMON, args.https))
-            gobuster.daemon = True
             gobuster.start()
         else:
             print("|-| Failed to start Gobuster: ports closed")
