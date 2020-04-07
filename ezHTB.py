@@ -60,7 +60,6 @@ def etc_hosts(box_name, box_ip_address):
     so that it can be accessed via hostname.
     :param box_name: the name of the box
     :param box_ip_address: the ip of the box
-    :return null
     """
     IN_THERE = False
     if APPEND_HOSTS:
@@ -145,12 +144,67 @@ def check_port(box_ip_address, port):
         return False
 
 
-def main(args):
+def arg_parser():
+
+    parser = argparse.ArgumentParser(prog='ezHTB.py', usage='%(prog)s [options]')
+    options = parser.add_argument_group('options', '')
+    options.add_argument('-n', '--hostname', nargs=1,
+                         help='box name: used to create the directory structure and an entry in /etc/hosts')
+    options.add_argument('-i', '--ip', nargs=1, help='box ip address: target ip address')
+    options.add_argument('-p', '--port', nargs=1, help='box port: host port')
+    options.add_argument('-R', '--reverse', nargs='+',
+                         help='creating a reverse shell based on the choose of the user')
+    options.add_argument('-G', '--gobuster', action='store_true',
+                         help='..')
+    options.add_argument('-N', '--nmap', action='store_true',
+                         help='..')
+    options.add_argument('-E', '--enum4linux', action='store_true',
+                         help='..')
+    options.add_argument('-K', '--nikto', action='store_true',
+                         help='..')
+    options.add_argument('-x', '--https', action='store_true', help='force https')
+    args = parser.parse_args()
+    return args
+
+
+def reverse(args):
+
+    php = "php" in args.reverse
+    bash = "bash" in args.reverse
+    powershell = "powershell" in args.reverse
+    ncat = "ncat" in args.reverse
+
+    if args.reverse is None or args.port is None or args.ip is None:
+        print("incomplete reverse shell parameters")
+        exit(1)
+    if php and args.port is not None and args.ip is not None:
+        print("php")
+    if bash and args.port is not None and args.ip is not None:
+        print("bash")
+    if powershell and args.port is not None and args.ip is not None:
+        print("powershell")
+    if ncat and args.port is not None and args.ip is not None:
+        print("ncat")
+    if args.reverse is not None and not php and not bash and not powershell and not ncat:
+        print("invalid reverse shell type")
+
+    exit(1)
+
+
+def main():
     """
     The main function which takes the input from the user and then run the correct nmap scan regarding
     to the input.
-    :param args: the argument from the user.
     """
+
+    args = arg_parser()
+    print(args)
+
+    if args.reverse is not None:
+        reverse(args)
+    else:
+        print("reverse is null")
+        exit(1)
 
     print("|+| Creating directories")
     init(args.box_name)
@@ -195,15 +249,5 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog='ezHTB', usage='ezHTB.py [options] box_name box_ip_address')
-    parser.add_argument('box_name', metavar='box_name', type=str,
-                        help='box name: used to create the directory structure')
-    parser.add_argument('box_ip_address', metavar='box_ip_address', type=str, help='box_ip_address: target ip address')
-    parser.add_subparsers(help='Default run: nmap -sC -sV -oN \n | gobuster http/https common_dir.txt wordlists')
-    parser.add_argument('-q', '--quick', action='store_true',
-                        help='determine scan parameters: nmap -Pn -sV | gobuster http/https small wordlists')
-    parser.add_argument('-m', '--maximum', action='store_true',
-                        help='determine scan parameters: nmap -T4 -A -p 1-65535 | gobuster http/https medium wordlists')
-    parser.add_argument('-x', '--https', action='store_true', help='force https')
-    args = parser.parse_args()
-    main(args)
+    main()
+
