@@ -3,16 +3,19 @@ import sys
 import socket
 import argparse
 import subprocess
+import shutil
 from multiprocessing import Process
 from pathlib import Path
+
 
 OUTPUT_DIR = "/root/Desktop/test/"
 # OUTPUT_DIR = "/root/Desktop/HackTheBox/"
 OUTPUT_NMAP = "/nmap.txt"
 OUTPUT_GOBUSTER = "/gobuster.txt"
+OUTPUT_PHP = "/php-reverse-shell.php"
 
 DIR_COMMON = "/root/Desktop/HackTheBox/common_dir.txt"
-DIR_SMALL = "/root/Desktop/test.txt"
+DIR_SMALL = "/root/Desktop/test.txt"  # take it oouuuuttt and use os.path.join(os.getcwd() ---------*****_*_*_*_*
 # DIR_SMALL = "/usr/share/dirbuster/wordlists/directory-list-2.3-small.txt"
 DIR_MEDIUM = "/usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt"
 
@@ -22,13 +25,14 @@ NMAP_BIN_LOC = "/usr/bin/nmap"
 GOBUSTER_BIN_LOC = "/usr/bin/gobuster"
 
 
-def init(box_name):
+def init(args):
     """
     This function initialize the directory path for the target box following the /root/Desktop/HackTheBox/{box_name}
     format, and the supported tools for now nmap. Their format will be {tool_name}.txt inside
     the ~/HackTheBox/{box_name}/ directory
-    :param box_name: the name of the box
+    :param args: the name of the box
     """
+    box_name = args.hostname
     f = Path(OUTPUT_DIR + box_name)
     try:
         f.mkdir()
@@ -150,13 +154,13 @@ def arg_parser():
     options = parser.add_argument_group('options', '')
     options.add_argument('-n', '--hostname', nargs=1,
                          help='box name: used to create the directory structure and an entry in /etc/hosts')
-    options.add_argument('-i', '--ip', nargs=1, help='box ip address: target ip address')
-    options.add_argument('-p', '--port', nargs=1, help='box port: host port')
+    options.add_argument('-i', '--ip', action='store', help='box ip address: target ip address')
+    options.add_argument('-p', '--port', action='store', help='box port: host port')
     options.add_argument('-R', '--reverse', nargs='+',
                          help='creating a reverse shell based on the choose of the user')
-    options.add_argument('-G', '--gobuster', action='store_true',
+    options.add_argument('-G', '--gobuster', action='store',
                          help='..')
-    options.add_argument('-N', '--nmap', action='store_true',
+    options.add_argument('-N', '--nmap', action='store',
                          help='..')
     options.add_argument('-E', '--enum4linux', action='store_true',
                          help='..')
@@ -178,7 +182,14 @@ def reverse(args):
         print("incomplete reverse shell parameters")
         exit(1)
     if php and args.port is not None and args.ip is not None:
-        print("php")
+        php_path = os.path.join(os.getcwd() + "/php-reverse-shell.php")
+        dir_path = os.path.join(os.getcwd() + "/Files/php-reverse-shell.php")
+        path = Path(dir_path)
+        new_path = Path(php_path)
+        text = path.read_text()
+        text = text.replace("127.0.0.1", f"{args.ip}")
+        text = text.replace("1234", f"{args.port}")
+        new_path.write_text(text)
     if bash and args.port is not None and args.ip is not None:
         print("bash")
     if powershell and args.port is not None and args.ip is not None:
@@ -202,12 +213,9 @@ def main():
 
     if args.reverse is not None:
         reverse(args)
-    else:
-        print("reverse is null")
-        exit(1)
 
     print("|+| Creating directories")
-    init(args.box_name)
+    init(args)
 
     print("|+| Creating /etc/hosts entry")
     etc_hosts(args.box_name, args.box_ip_address)
