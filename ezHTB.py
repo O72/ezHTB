@@ -113,7 +113,7 @@ def etc_hosts(hostname, ip_address):
                 if IN_THERE:
                     print("|-| The ip address is already in the /etc/hosts ")
                 else:
-                    f.write("\n" + box_ip_address + "\t" + box_name.lower() + ".htb ")
+                    f.write("\n" + ip_address + "\t" + hostname.lower() + ".htb ")
         except PermissionError as skip:
             print("|-| Insufficient permissions: could not write to /etc/hosts")
 
@@ -148,60 +148,43 @@ def reverse(args):
             text = text.replace("1234", f"{args.port}")
             new_path.write_text(text)
     if bash and args.port is not None and args.ip is not None:
-        if args.out is not None:
-            php_path = os.path.join(os.getcwd() + f"/{args.out}")
-            dir_path = os.path.join(os.getcwd() + f"{OUTPUT_BASH}")
-            path = Path(dir_path)
-            new_path = Path(php_path)
-            text = path.read_text()
-            text = text.replace("127.0.0.1", f"{args.ip}")
-            text = text.replace("1234", f"{args.port}")
-            new_path.write_text(text)
-        else:
-            dir_path = os.path.join(os.getcwd() + f"/Files{OUTPUT_BASH}")
-            path = Path(dir_path)
-            text = path.read_text()
-            text = text.replace("127.0.0.1", f"{args.ip}")
-            text = text.replace("1234", f"{args.port}")
-            print(text)
+        reverse_handle(args.ip, args.port, args.out, OUTPUT_BASH)
+
     if powershell and args.port is not None and args.ip is not None:
-        if args.out is not None:
-            php_path = os.path.join(os.getcwd() + f"/{args.out}")
-            dir_path = os.path.join(os.getcwd() + f"/Files{OUTPUT_POWERSHELL}")
-            path = Path(dir_path)
-            new_path = Path(php_path)
-            text = path.read_text()
-            text = text.replace("127.0.0.1", f"{args.ip}")
-            text = text.replace("1234", f"{args.port}")
-            new_path.write_text(text)
-        else:
-            dir_path = os.path.join(os.getcwd() + f"/Files{OUTPUT_POWERSHELL}")
-            path = Path(dir_path)
-            text = path.read_text()
-            text = text.replace("127.0.0.1", f"{args.ip}")
-            text = text.replace("1234", f"{args.port}")
-            print(text)
+        reverse_handle(args.ip, args.port, args.out, OUTPUT_POWERSHELL)
+
     if nc and args.port is not None and args.ip is not None:
-        if args.out is not None:
-            php_path = os.path.join(os.getcwd() + f"/{args.out}")
-            dir_path = os.path.join(os.getcwd() + f"/Files{OUTPUT_NC}")
-            path = Path(dir_path)
-            new_path = Path(php_path)
-            text = path.read_text()
-            text = text.replace("127.0.0.1", f"{args.ip}")
-            text = text.replace("1234", f"{args.port}")
-            new_path.write_text(text)
-        else:
-            dir_path = os.path.join(os.getcwd() + f"/Files{OUTPUT_NC}")
-            path = Path(dir_path)
-            text = path.read_text()
-            text = text.replace("127.0.0.1", f"{args.ip}")
-            text = text.replace("1234", f"{args.port}")
-            print(text)
+        reverse_handle(args.ip, args.port, args.out, OUTPUT_NC)
+
     if args.reverse is not None and not php and not bash and not powershell and not nc:
         print("invalid reverse shell type")
 
     exit(1)
+
+def reverse_handle(ip, port, out_flag, output_type):
+    """
+    This function handle the condition of whether the user chose -o which will redirect the result to a file.
+    :param ip: the ip address for the reverse shell to call back to
+    :param port: the port for the reverse shell to call back to
+    :param out_flag: whether the user chose to output the result
+    :param output_type: the kind of the reverse shell
+    """
+    if args.out is not None:
+        php_path = os.path.join(os.getcwd() + f"/{out_flag}")
+        dir_path = os.path.join(os.getcwd() + f"/Files{output_type}")
+        path = Path(dir_path)
+        new_path = Path(php_path)
+        text = path.read_text()
+        text = text.replace("127.0.0.1", f"{ip}")
+        text = text.replace("1234", f"{port}")
+        new_path.write_text(text)
+    else:
+        dir_path = os.path.join(os.getcwd() + f"/Files{output_type}")
+        path = Path(dir_path)
+        text = path.read_text()
+        text = text.replace("127.0.0.1", f"{ip}")
+        text = text.replace("1234", f"{port}")
+        print(text)
 
 
 def start_nmap(box_name, box_ip_address, quick, maximum):
