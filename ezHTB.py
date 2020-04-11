@@ -7,63 +7,97 @@ import shutil
 from multiprocessing import Process
 from pathlib import Path
 
-
-OUTPUT_DIR = "/root/Desktop/test/"
-# OUTPUT_DIR = "/root/Desktop/HackTheBox/"
+# Tools output structure
+OUTPUT_DIR = "/ezHTB/"
 OUTPUT_NMAP = "/nmap.txt"
 OUTPUT_GOBUSTER = "/gobuster.txt"
-OUTPUT_PHP = "/php-reverse-shell.php"
+OUTPUT_NIKTO = "/nikto.txt"
+OUTPUT_ENUM4LINUX = "/enum4linux.txt"
 
+# Reverse shells for reverse() function
+OUTPUT_PHP = "/php-reverse-shell.php"
+OUTPUT_BASH = "/bash_reverse_shell.sh"
+OUTPUT_POWERSHELL = "/powershell_reverse_shell.ps1"
+OUTPUT_NC = "/nc_reverse_shell.txt"
+
+# Gobuster wordlists
 DIR_COMMON = "/root/Desktop/HackTheBox/common_dir.txt"
-DIR_SMALL = "/root/Desktop/test.txt"  # take it oouuuuttt and use os.path.join(os.getcwd() ---------*****_*_*_*_*
-# DIR_SMALL = "/usr/share/dirbuster/wordlists/directory-list-2.3-small.txt"
+DIR_SMALL = "/usr/share/dirbuster/wordlists/directory-list-2.3-small.txt"
 DIR_MEDIUM = "/usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt"
 
+# Append to /etc/hosts
 APPEND_HOSTS = True
 
+# Tools binaries
 NMAP_BIN_LOC = "/usr/bin/nmap"
 GOBUSTER_BIN_LOC = "/usr/bin/gobuster"
+NIKTO_BIN_LOC = "/usr/bin/nikto"
 
 
 def init(args):
     """
-    This function initialize the directory path for the target box following the /root/Desktop/HackTheBox/{box_name}
-    format, and the supported tools for now nmap. Their format will be {tool_name}.txt inside
-    the ~/HackTheBox/{box_name}/ directory
-    :param args: the name of the box
+    This function initialize the directories path for the each tool that is being used.
+    :param args: which args did the user choose
     """
-    box_name = args.hostname
-    f = Path(OUTPUT_DIR + box_name)
-    try:
-        f.mkdir()
-    except FileExistsError as skip:
-        print("|-| Skipping: directory already exists")
-
-    f = Path(OUTPUT_DIR + box_name + OUTPUT_NMAP)
-    if not os.path.exists(os.path.dirname(f)):
+    if args.hostname is not None:
+        f = Path(os.path.join(os.getcwd()) + OUTPUT_DIR + args.hostname)
         try:
-            os.makedirs(os.path.dirname(f))
-        except OSError as skip:
-            if skip.errno != errno.EEXIST:
-                raise
-            print("|-| Skipping: file already exists")
+            f.mkdir()
+        except FileExistsError as skip:
+            print("|-| Skipping: directory already exists")
 
-    f = Path(OUTPUT_DIR + box_name + OUTPUT_GOBUSTER)
-    if not os.path.exists(os.path.dirname(f)):
+    if args.hostname is None:
+        f = Path(os.path.join(os.getcwd()) + OUTPUT_DIR)
         try:
-            os.makedirs(os.path.dirname(f))
-        except OSError as skip:
-            if skip.errno != errno.EEXIST:
-                raise
-            print("|-| Skipping: file already exists")
+            f.mkdir()
+        except FileExistsError as skip:
+            print("|-| Skipping: directory already exists")
+
+    if args.nmap is not None:
+        init_handle(args.hostname, OUTPUT_NMAP)
+
+    if args.gobuster is not None:
+        init_handle(args.hostname, OUTPUT_GOBUSTER)
+
+    if args.nikto:
+        init_handle(args.hostname, OUTPUT_NIKTO)
+
+    if args.enum4linux:
+        init_handle(args.hostname, OUTPUT_ENUM4LINUX)
 
 
-def etc_hosts(box_name, box_ip_address):
+def init_handle(box_name, output_type):
+    """
+    This function handles the creating of each tool structure files. If there is a hostname the structure file will be
+    ~/ezHTB/{hostname}/{tool_name.txt}, if not it will be like ~/ezHTB/{tool_name.txt}.
+    :param box_name: whether the user choose a box name or not
+    :param output_type: the tool output format
+    """
+    if box_name is None:
+        f = Path(os.path.join(os.getcwd()) + OUTPUT_DIR + output_type)
+        if not os.path.exists(os.path.dirname(f)):
+            try:
+                os.makedirs(os.path.dirname(f))
+            except OSError as skip:
+                if skip.errno != errno.EEXIST:
+                    raise
+                print("|-| Skipping: file already exists")
+    elif box_name is not None:
+        f = Path(os.path.join(os.getcwd()) + OUTPUT_DIR + box_name + output_type)
+        if not os.path.exists(os.path.dirname(f)):
+            try:
+                os.makedirs(os.path.dirname(f))
+            except OSError as skip:
+                if skip.errno != errno.EEXIST:
+                    raise
+                print("|-| Skipping: file already exists")
+
+def etc_hosts(hostname, ip_address):
     """
     This function will add the box name with a format of {box_name}.htb and its ip address to the /etc/hosts
     so that it can be accessed via hostname.
-    :param box_name: the name of the box
-    :param box_ip_address: the ip of the box
+    :param hostname: the name of the target hostname
+    :param ip_address: the ip of the target
     """
     IN_THERE = False
     if APPEND_HOSTS:
@@ -72,7 +106,7 @@ def etc_hosts(box_name, box_ip_address):
                 for line in f:
                     line = line.split()
                     if line:
-                        if line[0] == box_ip_address:
+                        if line[0] == ip_address:
                             IN_THERE = True
                             break
             with open("/etc/hosts", "a") as f:
@@ -82,6 +116,92 @@ def etc_hosts(box_name, box_ip_address):
                     f.write("\n" + box_ip_address + "\t" + box_name.lower() + ".htb ")
         except PermissionError as skip:
             print("|-| Insufficient permissions: could not write to /etc/hosts")
+
+
+def reverse(args):
+
+    php = "php" in args.reverse
+    bash = "bash" in args.reverse
+    powershell = "powershell" in args.reverse
+    nc = "nc" in args.reverse
+
+    if args.reverse is None or args.port is None or args.ip is None:
+        print("incomplete reverse shell parameters")
+        exit(1)
+    if php and args.port is not None and args.ip is not None:
+        if args.out is not None:
+            php_path = os.path.join(os.getcwd() + f"/{args.out}")
+            dir_path = os.path.join(os.getcwd() + f"/Files{OUTPUT_PHP}")
+            path = Path(dir_path)
+            new_path = Path(php_path)
+            text = path.read_text()
+            text = text.replace("127.0.0.1", f"{args.ip}")
+            text = text.replace("1234", f"{args.port}")
+            new_path.write_text(text)
+        else:
+            php_path = os.path.join(os.getcwd() + f"{OUTPUT_PHP}")
+            dir_path = os.path.join(os.getcwd() + f"{OUTPUT_PHP}")
+            path = Path(dir_path)
+            new_path = Path(php_path)
+            text = path.read_text()
+            text = text.replace("127.0.0.1", f"{args.ip}")
+            text = text.replace("1234", f"{args.port}")
+            new_path.write_text(text)
+    if bash and args.port is not None and args.ip is not None:
+        if args.out is not None:
+            php_path = os.path.join(os.getcwd() + f"/{args.out}")
+            dir_path = os.path.join(os.getcwd() + f"{OUTPUT_BASH}")
+            path = Path(dir_path)
+            new_path = Path(php_path)
+            text = path.read_text()
+            text = text.replace("127.0.0.1", f"{args.ip}")
+            text = text.replace("1234", f"{args.port}")
+            new_path.write_text(text)
+        else:
+            dir_path = os.path.join(os.getcwd() + f"/Files{OUTPUT_BASH}")
+            path = Path(dir_path)
+            text = path.read_text()
+            text = text.replace("127.0.0.1", f"{args.ip}")
+            text = text.replace("1234", f"{args.port}")
+            print(text)
+    if powershell and args.port is not None and args.ip is not None:
+        if args.out is not None:
+            php_path = os.path.join(os.getcwd() + f"/{args.out}")
+            dir_path = os.path.join(os.getcwd() + f"/Files{OUTPUT_POWERSHELL}")
+            path = Path(dir_path)
+            new_path = Path(php_path)
+            text = path.read_text()
+            text = text.replace("127.0.0.1", f"{args.ip}")
+            text = text.replace("1234", f"{args.port}")
+            new_path.write_text(text)
+        else:
+            dir_path = os.path.join(os.getcwd() + f"/Files{OUTPUT_POWERSHELL}")
+            path = Path(dir_path)
+            text = path.read_text()
+            text = text.replace("127.0.0.1", f"{args.ip}")
+            text = text.replace("1234", f"{args.port}")
+            print(text)
+    if nc and args.port is not None and args.ip is not None:
+        if args.out is not None:
+            php_path = os.path.join(os.getcwd() + f"/{args.out}")
+            dir_path = os.path.join(os.getcwd() + f"/Files{OUTPUT_NC}")
+            path = Path(dir_path)
+            new_path = Path(php_path)
+            text = path.read_text()
+            text = text.replace("127.0.0.1", f"{args.ip}")
+            text = text.replace("1234", f"{args.port}")
+            new_path.write_text(text)
+        else:
+            dir_path = os.path.join(os.getcwd() + f"/Files{OUTPUT_NC}")
+            path = Path(dir_path)
+            text = path.read_text()
+            text = text.replace("127.0.0.1", f"{args.ip}")
+            text = text.replace("1234", f"{args.port}")
+            print(text)
+    if args.reverse is not None and not php and not bash and not powershell and not nc:
+        print("invalid reverse shell type")
+
+    exit(1)
 
 
 def start_nmap(box_name, box_ip_address, quick, maximum):
@@ -152,7 +272,7 @@ def arg_parser():
 
     parser = argparse.ArgumentParser(prog='ezHTB.py', usage='%(prog)s [options]')
     options = parser.add_argument_group('options', '')
-    options.add_argument('-n', '--hostname', nargs=1,
+    options.add_argument('-H', '--hostname', nargs=1,
                          help='box name: used to create the directory structure and an entry in /etc/hosts')
     options.add_argument('-i', '--ip', action='store', help='box ip address: target ip address')
     options.add_argument('-p', '--port', action='store', help='box port: host port')
@@ -160,46 +280,16 @@ def arg_parser():
                          help='creating a reverse shell based on the choose of the user')
     options.add_argument('-G', '--gobuster', action='store',
                          help='..')
-    options.add_argument('-N', '--nmap', action='store',
+    options.add_argument('-n', '--nmap', action='store',
                          help='..')
     options.add_argument('-E', '--enum4linux', action='store_true',
                          help='..')
-    options.add_argument('-K', '--nikto', action='store_true',
+    options.add_argument('-N', '--nikto', action='store_true',
                          help='..')
+    options.add_argument('-o', '--out', action='store', help='Output file name')
     options.add_argument('-x', '--https', action='store_true', help='force https')
     args = parser.parse_args()
     return args
-
-
-def reverse(args):
-
-    php = "php" in args.reverse
-    bash = "bash" in args.reverse
-    powershell = "powershell" in args.reverse
-    ncat = "ncat" in args.reverse
-
-    if args.reverse is None or args.port is None or args.ip is None:
-        print("incomplete reverse shell parameters")
-        exit(1)
-    if php and args.port is not None and args.ip is not None:
-        php_path = os.path.join(os.getcwd() + "/php-reverse-shell.php")
-        dir_path = os.path.join(os.getcwd() + "/Files/php-reverse-shell.php")
-        path = Path(dir_path)
-        new_path = Path(php_path)
-        text = path.read_text()
-        text = text.replace("127.0.0.1", f"{args.ip}")
-        text = text.replace("1234", f"{args.port}")
-        new_path.write_text(text)
-    if bash and args.port is not None and args.ip is not None:
-        print("bash")
-    if powershell and args.port is not None and args.ip is not None:
-        print("powershell")
-    if ncat and args.port is not None and args.ip is not None:
-        print("ncat")
-    if args.reverse is not None and not php and not bash and not powershell and not ncat:
-        print("invalid reverse shell type")
-
-    exit(1)
 
 
 def main():
@@ -217,12 +307,15 @@ def main():
     print("|+| Creating directories")
     init(args)
 
-    print("|+| Creating /etc/hosts entry")
-    etc_hosts(args.box_name, args.box_ip_address)
+    if args.hostname is not None:
+        print("|+| Creating /etc/hosts entry")
+        etc_hosts(args.hostname, args.ip)
 
-    print("|+| Starting nmap")
-    nmap = Process(target=start_nmap, args=(args.box_name, args.box_ip_address, args.quick, args.maximum))
-    nmap.start()
+    if args.nmap is not None:
+        print("|+| Starting nmap")
+        nmap = Process(target=start_nmap, args=(args.hostname, args.ip, args.nmap))
+        nmap.start()
+
 
     print("|+| Starting gobuster")
     if args.quick:
