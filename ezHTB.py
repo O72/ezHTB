@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+__author__ = "Omar Aljaloud (O72)"
+__license__ = "MIT"
+__version__ = "0.1"
+__email__ = "oaa3024@rit.edu"
+__status__ = "Under Development"
+
 import os
 import sys
 import socket
@@ -10,7 +17,8 @@ from multiprocessing import Process
 from pathlib import Path
 
 # Tools output structure
-OUTPUT_DIR = Path(os.path.join(os.getcwd() + "/ezHTB"))  # ~/ezHTB
+ezHTB = "/ezHTB_Results"
+OUTPUT_DIR = Path(os.path.join(os.getcwd() + ezHTB))  # ~/ezHTB
 OUTPUT_NMAP = "/nmap.txt"
 OUTPUT_GOBUSTER = "/gobuster.txt"
 OUTPUT_NIKTO = "/nikto.txt"
@@ -43,7 +51,7 @@ def init(args):
     :param args: which args did the user choose
     """
     if args.hostname is not None:
-        f = Path(os.path.join(os.getcwd() + "/ezHTB" + args.hostname))
+        f = Path(os.path.join(os.getcwd() + ezHTB + args.hostname))
         try:
             f.mkdir()
         except FileExistsError as skip:
@@ -76,7 +84,7 @@ def init_handle(box_name, output_type):
     :param output_type: the tool output format
     """
     if box_name is None:
-        f = os.path.join(os.getcwd() + output_type)
+        f = os.path.join(os.getcwd() + ezHTB + output_type)
         if not os.path.exists(os.path.dirname(f)):
             try:
                 os.makedirs(os.path.dirname(f))
@@ -85,7 +93,7 @@ def init_handle(box_name, output_type):
                     raise
                 print("|-| Skipping: file already exists")
     elif box_name is not None:
-        f = os.path.join(os.getcwd() + output_type + box_name + output_type)
+        f = os.path.join(os.getcwd() + ezHTB + box_name + output_type)
         if not os.path.exists(os.path.dirname(f)):
             try:
                 os.makedirs(os.path.dirname(f))
@@ -137,51 +145,55 @@ def reverse(args):
         exit(1)
     if php and args.port is not None and args.ip is not None:
         if args.out is not None:
-            php_path = os.path.join(os.getcwd() + f"/{args.out}")
+            type_path = os.path.join(os.getcwd() + ezHTB + f"/{args.out}")
+            dir_path = Path(os.path.join(os.getcwd() + f"/Files{OUTPUT_PHP}"))
+            new_path = Path(type_path)
+            text = dir_path.read_text()
+            text = text.replace("127.0.0.1", f"{args.ip}")
+            text = text.replace("1234", f"{args.port}")
+            new_path.write_text(text)
+            print(f"|+| php reverse shell has been created in {type_path}")
+        else:
+            php_path = os.path.join(os.getcwd() + ezHTB + f"{OUTPUT_PHP}")
             dir_path = Path(os.path.join(os.getcwd() + f"/Files{OUTPUT_PHP}"))
             new_path = Path(php_path)
             text = dir_path.read_text()
             text = text.replace("127.0.0.1", f"{args.ip}")
             text = text.replace("1234", f"{args.port}")
             new_path.write_text(text)
-        else:
-            php_path = os.path.join(os.getcwd() + f"{OUTPUT_PHP}")
-            dir_path = Path(os.path.join(os.getcwd() + f"{OUTPUT_PHP}"))
-            new_path = Path(php_path)
-            text = dir_path.read_text()
-            text = text.replace("127.0.0.1", f"{args.ip}")
-            text = text.replace("1234", f"{args.port}")
-            new_path.write_text(text)
+            print(f"|+| php reverse shell has been created in {php_path}")
     if bash and args.port is not None and args.ip is not None:
-        reverse_handle(args.ip, args.port, args.out, OUTPUT_BASH)
+        reverse_handle(args.ip, args.port, args.out, OUTPUT_BASH, "bash")
 
     if powershell and args.port is not None and args.ip is not None:
-        reverse_handle(args.ip, args.port, args.out, OUTPUT_POWERSHELL)
+        reverse_handle(args.ip, args.port, args.out, OUTPUT_POWERSHELL, "powershell")
 
     if nc and args.port is not None and args.ip is not None:
-        reverse_handle(args.ip, args.port, args.out, OUTPUT_NC)
+        reverse_handle(args.ip, args.port, args.out, OUTPUT_NC, "nc")
 
     if args.reverse is not None and not php and not bash and not powershell and not nc:
         print("|-| Invalid reverse shell type")
 
     exit(0)
 
-def reverse_handle(ip, port, out_flag, output_type):
+def reverse_handle(ip, port, out_flag, output_type, reverse_type):
     """
     This function handle the condition of whether the user chose -o which will redirect the result to a file.
     :param ip: the ip address for the reverse shell to call back to
     :param port: the port for the reverse shell to call back to
     :param out_flag: whether the user chose to output the result
-    :param output_type: the kind of the reverse shell
+    :param output_type: the path of reverse shell
+    :param reverse_type: the type of reverse shell
     """
     if out_flag is not None:
-        php_path = os.path.join(os.getcwd() + f"/{out_flag}")
+        type_path = os.path.join(os.getcwd() + ezHTB + f"/{out_flag}")
         dir_path = Path(os.path.join(os.getcwd() + f"/Files{output_type}"))
-        new_path = Path(php_path)
+        new_path = Path(type_path)
         text = dir_path.read_text()
         text = text.replace("127.0.0.1", f"{ip}")
         text = text.replace("1234", f"{port}")
         new_path.write_text(text)
+        print(f"|+| {reverse_type} reverse shell has been created in {type_path}")
     else:
         dir_path = Path(os.path.join(os.getcwd() + f"/Files{output_type}"))
         text = dir_path.read_text()
@@ -200,19 +212,25 @@ def start_nmap(hostname, ip_address, nmap_type):
     """
     try:
         if hostname is not None:
-            output = os.path.join(os.getcwd() + box_name + OUTPUT_NMAP)
-            nmap_handle_hostname(ip_address, nmap_type, output)
+            output = os.path.join(os.getcwd() + ezHTB + box_name + OUTPUT_NMAP)
+            nmap_handle(ip_address, nmap_type, output)
         elif hostname is None:
-            output = os.path.join(os.getcwd() + OUTPUT_NMAP)
-            nmap_handle_hostname(ip_address, nmap_type, output)
+            output = os.path.join(os.getcwd() + ezHTB + OUTPUT_NMAP)
+            nmap_handle(ip_address, nmap_type, output)
 
         print("|+| Nmap scan complete")
     except Exception as skip:
         print("|-| Failed to initiate nmap")
         print(skip)
 
-def nmap_handle_hostname(ip_address, nmap_type, output):
-
+def nmap_handle(ip_address, nmap_type, output):
+    """
+    This function handles nmap to run with a given nmap scan type. special is recommended!!
+    :param ip_address: ip address of the target
+    :param nmap_type: the chosen nmap scan type
+    :param output: the result path
+    :return:
+    """
     if nmap_type == "special":
         tmp_file = "/tmp/" + ip_address + str(random.randrange(1000, 9999))
         subprocess.call([NMAP_BIN_LOC, "-Pn", "-p-", "-min-rate", "1000", "-oG", tmp_file, ip_address],
@@ -251,51 +269,52 @@ def nmap_handle_special(tmp_file):
 def start_gobuster(args):
     """
     This function runs gobuster with a wordlist chosen based on the parameter that the user provides.
-    :param args:
-    :param box_name: the name of the box
-    :param box_ip_address: the ip address of the box
-    :param wordlist: the word list for gobuster to use
-    :param force_https: boolean true if the user wants https, false otherwise
-    :return:
+    :param args: ip address, wordlist, https ?
     """
 
-    # if args.quick:
-    #     if check_port(args.box_ip_address, 80) and not args.https or \
-    #             check_port(args.box_ip_address, 443) and args.https:
-    #         gobuster = Process(target=start_gobuster,
-    #                            args=(args.box_name, args.box_ip_address, DIR_SMALL, args.https))
-    #         gobuster.start()
-    #     else:
-    #         print("|-| Failed to start Gobuster: ports closed")
-    # elif args.maximum:
-    #     if check_port(args.box_ip_address, 80) and not args.https or \
-    #             check_port(args.box_ip_address, 443) and args.https:
-    #         gobuster = Process(target=start_gobuster,
-    #                            args=(args.box_name, args.box_ip_address, DIR_MEDIUM, args.https))
-    #         gobuster.start()
-    #     else:
-    #         print("|-| Failed to start Gobuster: ports closed")
-    # else:
-    #     if check_port(args.box_ip_address, 80) and not args.https \
-    #             or check_port(args.box_ip_address, 443) and args.https:
-    #         gobuster = Process(target=start_gobuster,
-    #                            args=(args.box_name, args.box_ip_address, DIR_COMMON, args.https))
-    #         gobuster.start()
-    #     else:
-    #         print("|-| Failed to start Gobuster: ports closed")
-
-    url = "http://"
-    if force_https:
-        url = "https://"
-
     try:
-        output = os.path.join(os.getcwd() + box_name + OUTPUT_GOBUSTER)
-        subprocess.call([GOBUSTER_BIN_LOC, "dir", "-w", wordlist, "-z", "-q", "-x", ".php", "-o", output, "-u", url
-                         + box_ip_address], stdout=subprocess.DEVNULL)
+        if args.hostname is not None:
+            output = os.path.join(os.getcwd() + ezHTB + box_name + OUTPUT_GOBUSTER)
+            gobuster_helper(args.ip, args.gobuster, args.https, output)
+        elif args.hostname is None:
+            output = os.path.join(os.getcwd() + ezHTB + OUTPUT_GOBUSTER)
+            gobuster_helper(args.ip, args.gobuster, args.https, output)
         print("|+| Gobuster scan complete")
     except Exception as skip:
         print("|-| Failed to initiate gobuster")
         print(skip)
+
+
+def gobuster_helper(ip_address, wordlist, https, output):
+    """
+    This is a helper function to run gobuster with a chosen wordlist from the user and with http or https
+    :param ip_address: ip address of the target
+    :param wordlist: the chosen wordlist
+    :param https: will run https if true, will run http is false
+    :param output: the result path
+    """
+    url = "http://"
+    if https:
+        url = "https://"
+
+    if wordlist == "common":
+        if check_port(ip_address, 80) and not https or check_port(ip_address, 443) and https:
+            subprocess.call([GOBUSTER_BIN_LOC, "dir", "-w", DIR_COMMON, "-z", "-q", "-x", "-k", ".php, .html",
+                             "-o", output, "-u", url + ip_address], stdout=subprocess.DEVNULL)
+        else:
+            print("|-| Failed to start Gobuster: ports closed")
+    elif wordlist == "quick":
+        if check_port(ip_address, 80) and not https or check_port(ip_address, 443) and https:
+            subprocess.call([GOBUSTER_BIN_LOC, "dir", "-w", DIR_SMALL, "-z", "-q", "-x", "-k", ".php, .html",
+                             "-o", output, "-u", url + ip_address], stdout=subprocess.DEVNULL)
+        else:
+            print("|-| Failed to start Gobuster: ports closed")
+    elif wordlist == "medium":
+        if check_port(ip_address, 80) and not https or check_port(ip_address, 443) and https:
+            subprocess.call([GOBUSTER_BIN_LOC, "dir", "-w", DIR_MEDIUM, "-z", "-q", "-x", "-k", ".php, .html",
+                             "-o", output, "-u", url + ip_address], stdout=subprocess.DEVNULL)
+        else:
+            print("|-| Failed to start Gobuster: ports closed")
 
 
 def check_port(box_ip_address, port):
@@ -320,7 +339,7 @@ def arg_parser():
     :return: the Namespace of the input arguments.
     """
     parser = argparse.ArgumentParser(prog='ezHTB.py', usage='%(prog)s [options]')
-    options = parser.add_argument_group('options', '')
+    options = parser.add_argument_group('Flag options', '')
     options.add_argument('-H', '--hostname', nargs=1,
                          help='box name: used to create the directory structure and an entry in /etc/hosts')
     options.add_argument('-i', '--ip', action='store', help='box ip address: target ip address')
@@ -337,6 +356,11 @@ def arg_parser():
                          help='..')
     options.add_argument('-o', '--out', action='store', help='output file name. ex, -o test.txt')
     options.add_argument('-x', '--https', action='store_true', help='force https')
+
+    if len(sys.argv) < 2:
+        parser.print_help()
+        sys.exit(1)
+
     args = parser.parse_args()
     return args
 
@@ -353,12 +377,13 @@ def main():
 
     args = arg_parser()
     print(args)
-
-    if args.reverse is not None:
-        reverse(args)
+    print(args.reverse)
 
     print("|+| Creating directories")
     init(args)
+
+    if args.reverse is not None:
+        reverse(args)
 
     if args.hostname is not None:
         print("|+| Creating /etc/hosts entry")
