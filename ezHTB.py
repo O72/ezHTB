@@ -31,7 +31,7 @@ OUTPUT_POWERSHELL = "/powershell_reverse_shell.ps1"
 OUTPUT_NC = "/nc_reverse_shell.txt"
 
 # Gobuster wordlists
-DIR_COMMON = "/root/Desktop/HackTheBox/common_dir.txt"
+DIR_COMMON = "Files/common_dir.txt"
 DIR_SMALL = "/usr/share/dirbuster/wordlists/directory-list-2.3-small.txt"
 DIR_MEDIUM = "/usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt"
 
@@ -275,58 +275,92 @@ def start_gobuster(args):
     try:
         if args.hostname is not None:
             output = os.path.join(os.getcwd() + ezHTB + box_name + OUTPUT_GOBUSTER)
-            gobuster_helper(args.ip, args.gobuster, args.https, output)
+            gobuster_helper(args.ip, args.gobuster, args.https, output, args.port)
         elif args.hostname is None:
             output = os.path.join(os.getcwd() + ezHTB + OUTPUT_GOBUSTER)
-            gobuster_helper(args.ip, args.gobuster, args.https, output)
+            gobuster_helper(args.ip, args.gobuster, args.https, output, args.port)
         print("|+| Gobuster scan complete")
     except Exception as skip:
         print("|-| Failed to initiate gobuster")
         print(skip)
 
 
-def gobuster_helper(ip_address, wordlist, https, output):
+def gobuster_helper(ip_address, wordlist, https, output, port):
     """
     This is a helper function to run gobuster with a chosen wordlist from the user and with http or https
     :param ip_address: ip address of the target
     :param wordlist: the chosen wordlist
     :param https: will run https if true, will run http is false
     :param output: the result path
+    :param port: the target port
     """
     url = "http://"
     if https:
         url = "https://"
 
-    if wordlist == "common":
-        if check_port(ip_address, 80) and not https or check_port(ip_address, 443) and https:
-            subprocess.call([GOBUSTER_BIN_LOC, "dir", "-w", DIR_COMMON, "-z", "-q", "-x", "-k", ".php, .html",
-                             "-o", output, "-u", url + ip_address], stdout=subprocess.DEVNULL)
-        else:
-            print("|-| Failed to start Gobuster: ports closed")
-    elif wordlist == "quick":
-        if check_port(ip_address, 80) and not https or check_port(ip_address, 443) and https:
-            subprocess.call([GOBUSTER_BIN_LOC, "dir", "-w", DIR_SMALL, "-z", "-q", "-x", "-k", ".php, .html",
-                             "-o", output, "-u", url + ip_address], stdout=subprocess.DEVNULL)
-        else:
-            print("|-| Failed to start Gobuster: ports closed")
-    elif wordlist == "medium":
-        if check_port(ip_address, 80) and not https or check_port(ip_address, 443) and https:
-            subprocess.call([GOBUSTER_BIN_LOC, "dir", "-w", DIR_MEDIUM, "-z", "-q", "-x", "-k", ".php, .html",
-                             "-o", output, "-u", url + ip_address], stdout=subprocess.DEVNULL)
-        else:
-            print("|-| Failed to start Gobuster: ports closed")
+    if wordlist == "common" and port is None:
+        wordlist = DIR_COMMON
+        gobuster_no_port(ip_address, url, wordlist, https, output)
+    elif wordlist == "quick" and port is None:
+        wordlist = DIR_SMALL
+        gobuster_no_port(ip_address, url, wordlist, https, output)
+    elif wordlist == "medium" and port is None:
+        wordlist = DIR_MEDIUM
+        gobuster_no_port(ip_address, url, wordlist, https, output)
+    elif wordlist == "common" and port is not None:
+        wordlist = DIR_COMMON
+        gobuster_port(ip_address, port, url, wordlist, https, output)
+    elif wordlist == "quick" and port is not None:
+        wordlist = DIR_SMALL
+        gobuster_port(ip_address, port, url, wordlist, https, output)
+    elif wordlist == "medium" and port is not None:
+        wordlist = DIR_MEDIUM
+        gobuster_port(ip_address, port, url, wordlist, https, output)
 
-
-def check_port(box_ip_address, port):
+def gobuster_no_port(ip_address, url, wordlist, https, output):
     """
-    This function check if the box has http/80 or https/443 up and return the result.
-    :param box_ip_address: the ip of the box
-    :param port: to check for port 80 and 443
+    This function is to check for port 80 and 443 if it is open if it is so then it will do gobuster on that specific
+    port with the choose of the user wordlist.
+    :param ip_address: the ip of the target
+    :param url: http or https
+    :param wordlist: the chosen of the user wordlist
+    :param https: true if -x if set false otherwise
+    :param output: output path
+    """
+    if check_port(ip_address, 80) and not https or check_port(ip_address, 443) and https:
+        subprocess.call([GOBUSTER_BIN_LOC, "dir", "-w", wordlist, "-z", "-q", "-k", "-x", ".php, .html",
+                         "-o", output, "-u", url + ip_address], stdout=subprocess.DEVNULL)
+    else:
+        print("|-| Failed to start Gobuster: ports closed")
+
+def gobuster_port(ip_address, port, url, wordlist, https, output):
+    """
+    This function is to check for any given port if it is open if it is so then it will do gobuster on that specific
+    port with the choose of the user wordlist.
+    :param ip_address: the ip of the target
+    :param port: the port of the web target
+    :param url: http or https
+    :param wordlist: the chosen of the user wordlist
+    :param https: true if -x if set false otherwise
+    :param output: output path
+    """
+    if check_port(ip_address, port) and not https or check_port(ip_address, port) and https:
+        subprocess.call([GOBUSTER_BIN_LOC, "dir", "-w", wordlist, "-z", "-q", "-k", "-x", ".php, .html",
+                         "-o", output, "-u", url + ip_address + ":" + port], stdout=subprocess.DEVNULL)
+    else:
+        print("|-| Failed to start Gobuster: ports closed")
+
+
+def check_port(ip_address, port):
+    """
+    This function check if the target has http/80 or https/443 up or any port and return the result.
+    :param ip_address: the ip of the target
+    :param port: to check for port 80 and 443 or any other port
     :return: true if there is a site on that port, false otherwise.
     """
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(1)
-    respond = sock.connect_ex((box_ip_address, port))
+    respond = sock.connect_ex((ip_address, int(port)))
     if respond == 0:
         return True
     else:
@@ -377,7 +411,6 @@ def main():
 
     args = arg_parser()
     print(args)
-    print(args.reverse)
 
     print("|+| Creating directories")
     init(args)
