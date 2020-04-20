@@ -102,6 +102,7 @@ def init_handle(box_name, output_type):
                     raise
                 print("|-| Skipping: file already exists")
 
+
 def etc_hosts(hostname, ip_address):
     """
     This function will add the box name with a format of {box_name}.htb and its ip address to the /etc/hosts
@@ -214,11 +215,12 @@ def start_nmap(hostname, ip_address, nmap_type):
         if hostname is not None:
             output = os.path.join(os.getcwd() + ezHTB + box_name + OUTPUT_NMAP)
             nmap_handle(ip_address, nmap_type, output)
+            print("|*| Nmap scan completed")
         elif hostname is None:
             output = os.path.join(os.getcwd() + ezHTB + OUTPUT_NMAP)
             nmap_handle(ip_address, nmap_type, output)
+            print("|*| Nmap scan completed")
 
-        print("|+| Nmap scan complete")
     except Exception as skip:
         print("|-| Failed to initiate nmap")
         print(skip)
@@ -276,14 +278,14 @@ def start_gobuster(args):
         if args.hostname is not None:
             output = os.path.join(os.getcwd() + ezHTB + box_name + OUTPUT_GOBUSTER)
             gobuster_helper(args.ip, args.gobuster, args.https, output, args.port)
+            print("|*| Gobuster scan completed")
         elif args.hostname is None:
             output = os.path.join(os.getcwd() + ezHTB + OUTPUT_GOBUSTER)
             gobuster_helper(args.ip, args.gobuster, args.https, output, args.port)
-        print("|+| Gobuster scan complete")
+            print("|*| Gobuster scan completed")
     except Exception as skip:
         print("|-| Failed to initiate gobuster")
         print(skip)
-
 
 def gobuster_helper(ip_address, wordlist, https, output, port):
     """
@@ -351,6 +353,23 @@ def gobuster_port(ip_address, port, url, wordlist, https, output):
         print("|-| Failed to start Gobuster: ports closed")
 
 
+def start_nikto(ip_address, ssl):
+    """
+    This function is to scan a target web with nikto to look if the web has some vulnerability.
+    :param ip_address: ip address of the target
+    :param ssl: force ssl so that it starts 443 faster
+    """
+    output = os.path.join(os.getcwd() + ezHTB + OUTPUT_NIKTO)
+    if ssl:
+        subprocess.call([NIKTO_BIN_LOC, "-h", ip_address, "-s", "-o", output], stdout=subprocess.DEVNULL)
+        print("|*| Nikto scan completed")
+    elif not ssl:
+        subprocess.call([NIKTO_BIN_LOC, "-h", ip_address, "-o", output], stdout=subprocess.DEVNULL)
+        print("|*| Nikto scan completed")
+    else:
+        print("|-| Failed to initiate Nikto")
+
+
 def check_port(ip_address, port):
     """
     This function check if the target has http/80 or https/443 up or any port and return the result.
@@ -388,8 +407,10 @@ def arg_parser():
                          help='..')
     options.add_argument('-N', '--nikto', action='store_true',
                          help='..')
-    options.add_argument('-o', '--out', action='store', help='output file name. ex, -o test.txt')
+    options.add_argument('-o', '--out', action='store', help='output file name. ex, -o example.txt')
     options.add_argument('-x', '--https', action='store_true', help='force https')
+    options.add_argument('-s', '--ssl', action='store_true', help='force ssl')
+    options.add_argument('-a', '--append', action='store_true', help='append the ip address and hostname on /etc/hosts')
 
     if len(sys.argv) < 2:
         parser.print_help()
@@ -416,9 +437,10 @@ def main():
     init(args)
 
     if args.reverse is not None:
+        print("|+| Creating a reverse shell")
         reverse(args)
 
-    if args.hostname is not None:
+    if args.append is not None:
         print("|+| Creating /etc/hosts entry")
         etc_hosts(args.hostname, args.ip)
 
@@ -436,7 +458,8 @@ def main():
 
     if args.nikto:
         print("|+| Starting nikto")
-        # TODO: Process nikto
+        nikto = Process(target=start_nikto, args=(args.ip, args.ssl))
+        nikto.start()
         NIKTO_STARTED = True
 
     if args.enum4linux:
@@ -449,8 +472,7 @@ def main():
     if GOBUSTER_STARTED:
         gobuster.join()
     if NIKTO_STARTED:
-        # TODO: nikto.join()
-        pass
+        nikto.join()
     if ENUM4LINUX_STARTED:
         # TODO: enum4linux.join()
         pass
