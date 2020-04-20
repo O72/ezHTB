@@ -55,13 +55,13 @@ def init(args):
         try:
             f.mkdir()
         except FileExistsError as skip:
-            print("|-| Skipping: directory already exists")
+            print(f"|-| Skipping: {f} directory already exists")
 
     if args.hostname is None:
         try:
             OUTPUT_DIR.mkdir()
         except FileExistsError as skip:
-            print("|-| Skipping: directory already exists")
+            print(f"|-| Skipping: {OUTPUT_DIR} directory already exists")
 
     if args.nmap is not None:
         init_handle(args.hostname, OUTPUT_NMAP)
@@ -91,7 +91,7 @@ def init_handle(box_name, output_type):
             except OSError as skip:
                 if skip.errno != errno.EEXIST:
                     raise
-                print("|-| Skipping: file already exists")
+                print(f"|-| Skipping: {output_type} file already exists")
     elif box_name is not None:
         f = os.path.join(os.getcwd() + ezHTB + box_name + output_type)
         if not os.path.exists(os.path.dirname(f)):
@@ -100,7 +100,7 @@ def init_handle(box_name, output_type):
             except OSError as skip:
                 if skip.errno != errno.EEXIST:
                     raise
-                print("|-| Skipping: file already exists")
+                print(f"|-| Skipping: {output_type} file already exists")
 
 
 def etc_hosts(hostname, ip_address):
@@ -125,6 +125,8 @@ def etc_hosts(hostname, ip_address):
                     print("|-| The ip address is already in the /etc/hosts ")
                 else:
                     f.write("\n" + ip_address + "\t" + hostname.lower() + ".htb ")
+                    print(f"|*| The ip address {ip_address} and the hostname {hostname.lower}.htb "
+                          f"has been added to /etc/hosts ")
         except PermissionError as skip:
             print("|-| Insufficient permissions: could not write to /etc/hosts")
 
@@ -329,11 +331,14 @@ def gobuster_no_port(ip_address, url, wordlist, https, output):
     :param https: true if -x if set false otherwise
     :param output: output path
     """
-    if check_port(ip_address, 80) and not https or check_port(ip_address, 443) and https:
-        subprocess.call([GOBUSTER_BIN_LOC, "dir", "-w", wordlist, "-z", "-q", "-k", "-x", ".php, .html",
-                         "-o", output, "-u", url + ip_address], stdout=subprocess.DEVNULL)
-    else:
-        print("|-| Failed to start Gobuster: ports closed")
+    try:
+        if check_port(ip_address, 80) and not https or check_port(ip_address, 443) and https:
+            subprocess.call([GOBUSTER_BIN_LOC, "dir", "-w", wordlist, "-z", "-q", "-k", "-x", ".php, .html",
+                             "-o", output, "-u", url + ip_address], stdout=subprocess.DEVNULL)
+        else:
+            print("|-| Failed to start Gobuster: ports closed")
+    except OSError:
+        print("|-| Failed to initiate gobuster")
 
 def gobuster_port(ip_address, port, url, wordlist, https, output):
     """
@@ -346,12 +351,14 @@ def gobuster_port(ip_address, port, url, wordlist, https, output):
     :param https: true if -x if set false otherwise
     :param output: output path
     """
-    if check_port(ip_address, port) and not https or check_port(ip_address, port) and https:
-        subprocess.call([GOBUSTER_BIN_LOC, "dir", "-w", wordlist, "-z", "-q", "-k", "-x", ".php, .html",
-                         "-o", output, "-u", url + ip_address + ":" + port], stdout=subprocess.DEVNULL)
-    else:
-        print("|-| Failed to start Gobuster: ports closed")
-
+    try:
+        if check_port(ip_address, port) and not https or check_port(ip_address, port) and https:
+            subprocess.call([GOBUSTER_BIN_LOC, "dir", "-w", wordlist, "-z", "-q", "-k", "-x", ".php, .html",
+                             "-o", output, "-u", url + ip_address + ":" + port], stdout=subprocess.DEVNULL)
+        else:
+            print("|-| Failed to start Gobuster: ports closed")
+    except OSError:
+        print("|-| Failed to initiate gobuster")
 
 def start_nikto(ip_address, ssl):
     """
@@ -359,15 +366,30 @@ def start_nikto(ip_address, ssl):
     :param ip_address: ip address of the target
     :param ssl: force ssl so that it starts 443 faster
     """
-    output = os.path.join(os.getcwd() + ezHTB + OUTPUT_NIKTO)
-    if ssl:
-        subprocess.call([NIKTO_BIN_LOC, "-h", ip_address, "-s", "-o", output], stdout=subprocess.DEVNULL)
-        print("|*| Nikto scan completed")
-    elif not ssl:
-        subprocess.call([NIKTO_BIN_LOC, "-h", ip_address, "-o", output], stdout=subprocess.DEVNULL)
-        print("|*| Nikto scan completed")
-    else:
+    try:
+        output = os.path.join(os.getcwd() + ezHTB + OUTPUT_NIKTO)
+        if ssl:
+            subprocess.call([NIKTO_BIN_LOC, "-h", ip_address, "-s", "-o", output], stdout=subprocess.DEVNULL)
+            print("|*| Nikto scan completed")
+        elif not ssl:
+            subprocess.call([NIKTO_BIN_LOC, "-h", ip_address, "-o", output], stdout=subprocess.DEVNULL)
+            print("|*| Nikto scan completed")
+    except OSError:
         print("|-| Failed to initiate Nikto")
+
+
+def start_enum4linux(ip_address):
+    """
+    This function is to enumerating information from Windows or Unix through Samba systems.
+    :param ip_address: ip address of the target
+    """
+    try:
+        output_path = os.path.join(os.getcwd() + ezHTB + OUTPUT_NIKTO)
+        output = open(output_path, "w")
+        subprocess.call([ENUM4LINUX_BIN_LOC, "-a", ip_address], stdout=output)
+        print("|*| Enum4linux scan completed")
+    except OSError:
+        print("|-| Failed to initiate Enum4linux")
 
 
 def check_port(ip_address, port):
@@ -464,7 +486,8 @@ def main():
 
     if args.enum4linux:
         print("|+| Starting enum4linux")
-        # TODO: Process enum4linux
+        enum4linux = Process(target=start_enum4linux, args=(args.ip,))
+        enum4linux.start()
         ENUM4LINUX_STARTED = True
 
     if NMAP_STARTED:
@@ -474,10 +497,9 @@ def main():
     if NIKTO_STARTED:
         nikto.join()
     if ENUM4LINUX_STARTED:
-        # TODO: enum4linux.join()
-        pass
+        enum4linux.join()
 
-    print("|*| All scans complete.")
+    print("|*| All scans completed.")
 
 
 if __name__ == "__main__":
