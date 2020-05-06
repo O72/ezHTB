@@ -66,7 +66,7 @@ Flag options:
 ```bash
 # All the output are to ~/exHTB/ezHTB_Results
 
-# It will run nmap with the given ip address and a special type that will check for all known ports 
+# It will run nmap with the given ip address and a special type that will check for all ports 
 # to find open ports then it will do a deep scan into those open ports. 
 # (optional arg "-x" to force hhtps, optional types "quick, default, maximum, special") 
 python3 ezHTB.py -n special -i 10.10.10.X
