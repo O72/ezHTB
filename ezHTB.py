@@ -176,8 +176,7 @@ def reverse(args):
 
     if args.reverse is not None and not php and not bash and not powershell and not nc:
         print("|-| Invalid reverse shell type")
-
-    exit(0)
+        exit(0)
 
 def reverse_handle(ip, port, out_flag, output_type, reverse_type):
     """
@@ -384,10 +383,11 @@ def start_enum4linux(ip_address):
     :param ip_address: ip address of the target
     """
     try:
-        output_path = os.path.join(os.getcwd() + ezHTB + OUTPUT_NIKTO)
+        output_path = os.path.join(os.getcwd() + ezHTB + OUTPUT_ENUM4LINUX)
         output = open(output_path, "w")
         subprocess.call([ENUM4LINUX_BIN_LOC, "-a", ip_address], stdout=output)
         print("|*| Enum4linux scan completed")
+        output.close()
     except OSError:
         print("|-| Failed to initiate Enum4linux")
 
@@ -416,23 +416,25 @@ def arg_parser():
     parser = argparse.ArgumentParser(prog='ezHTB.py', usage='%(prog)s [options]')
     options = parser.add_argument_group('Flag options', '')
     options.add_argument('-H', '--hostname', nargs=1,
-                         help='box name: used to create the directory structure and an entry in /etc/hosts')
+                         help='box name: used to create the directory structure')
     options.add_argument('-i', '--ip', action='store', help='box ip address: target ip address')
     options.add_argument('-p', '--port', action='store', help='box port: host port')
     options.add_argument('-R', '--reverse', nargs='+',
-                         help='creating a reverse shell based on the choose of the user')
+                         help='reverse type: creating a reverse shell based on the choice of the user')
     options.add_argument('-G', '--gobuster', action='store',
-                         help='..')
+                         help='gobuster: run gobuster based on the choice of the user')
     options.add_argument('-n', '--nmap', action='store',
-                         help='nmap scan with one argument. see examples to find which argument you want')
+                         help='nmap: run nmap scan with several argument. see examples to find which argument is best '
+                              'for you')
     options.add_argument('-E', '--enum4linux', action='store_true',
-                         help='..')
+                         help='enum4linux: run enum4linux with -a which is all (require target ip address).')
     options.add_argument('-N', '--nikto', action='store_true',
-                         help='..')
+                         help='nikto: run nikto with -s to force ssl or without (require target ip address).')
+    options.add_argument('-a', '--append', action='store_true', help='Append the ip address and hostname on /etc/hosts '
+                                                                     '(require target ip address and hostname).')
     options.add_argument('-o', '--out', action='store', help='output file name. ex, -o example.txt')
     options.add_argument('-x', '--https', action='store_true', help='force https')
     options.add_argument('-s', '--ssl', action='store_true', help='force ssl')
-    options.add_argument('-a', '--append', action='store_true', help='append the ip address and hostname on /etc/hosts')
 
     if len(sys.argv) < 2:
         parser.print_help()
@@ -462,7 +464,7 @@ def main():
         print("|+| Creating a reverse shell")
         reverse(args)
 
-    if args.append is not None:
+    if args.append:
         print("|+| Creating /etc/hosts entry")
         etc_hosts(args.hostname, args.ip)
 
