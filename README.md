@@ -2,11 +2,12 @@
 ezHTB is a reconnaissance tool for HackTheBox that utilizes nmap, gobuster, nikto, and enum4linux
 with different options and features to make your recon faster. 
 
-- ezHTB can discover hosts and services on a computer network.
-- ezHTB can brute-force directories and files in web sites.
-- ezHTB can scan web-servers for dangerous files, vulnerability, outdated server software and other problems.
-- ezHTB can enumerate information from Windows and Samba systems for file share permissions.
-- ezHTB can create a reverse shell of your choice in a fast way, the choices being (php, bash, powershell, nc).
+- ezHTB can
+    - Discover hosts and services on a computer network.
+    - Brute-force directories and files in web sites.
+    - Scan web-servers for dangerous files, vulnerability, outdated server software and other problems.
+    - Enumerate information from Windows and Samba systems for file share permissions.
+    - Create a reverse shell of your choice in a fast way, the choices being (php, bash, powershell, nc).
 
 ## Prerequisites
 
@@ -31,7 +32,7 @@ python3 ezHTB.py
 ## Usage
 
 ```bash
-λ O72 Desktop → python3 ezHTB.py -h
+python3 ezHTB.py -h
 usage: ezHTB.py [options]
 
 optional arguments:
@@ -40,23 +41,21 @@ optional arguments:
 Flag options:
 
   -H HOSTNAME, --hostname HOSTNAME
-                        box name: used to create the directory structure
-  -i IP, --ip IP        box ip address: target ip address
-  -p PORT, --port PORT  box port: host port
+                        hostname: used to create the directory structure
+  -i IP, --ip IP        ip address: host/target ip address
+  -p PORT, --port PORT  port: host/target port
   -R REVERSE [REVERSE ...], --reverse REVERSE [REVERSE ...]
                         reverse type: creating a reverse shell based on the
                         choice of the user
   -G GOBUSTER, --gobuster GOBUSTER
-                        gobuster: run gobuster with several argument. look at
-                        examples to find which argument you want
-  -n NMAP, --nmap NMAP  nmap: run nmap scan with several argument. look at
-                        examples to find which argument you want
-  -E, --enum4linux      enum4linux: run enum4linux with -a which is all.
-                        (require target ip address).
-  -N, --nikto           nikto: run nikto with -s to force ssl or without
-                        (require target ip address).
+                        gobuster: run gobuster with several argument. see
+                        examples to find which argument is best for you.
+  -n NMAP, --nmap NMAP  nmap: run nmap scan with several argument. see
+                        examples to find which argument is best for you.
+  -E, --enum4linux      enum4linux: run enum4linux with -a which will do
+                        everything.
+  -N, --nikto           nikto: run nikto with -s to force ssl or without.
   -a, --append          Append the ip address and hostname on /etc/hosts
-                        (require target ip address and hostname).
   -o OUT, --out OUT     output file name. ex, -o example.txt
   -x, --https           force https
   -s, --ssl             force ssl
@@ -64,18 +63,18 @@ Flag options:
 
 ## Examples
 ```bash
-# All the output are to ~/exHTB/ezHTB_Results
+# All the output are redirected to ~/exHTB/ezHTB_Results
 
 # It will run nmap with the given ip address and a special type that will check for all ports 
 # to find open ports then it will do a deep scan into those open ports. 
-# (optional arg "-x" to force hhtps, optional types "quick, default, maximum, special") 
+# (optional types "quick, default, maximum, special") 
 python3 ezHTB.py -n special -i 10.10.10.X
 
 # It will run gobuster with the given ip address and a common directory type that is found in ~/ezHTB/Files
-# (optional types "common, quick, medium", optional args "-p" to choose a specific port 'defualt to 80/443 only')
+# (optional types "common, quick, medium", optional args "-p" to choose a specific port 'defualt to 80/443 only', "-x" to force https)
 python3 ezHTB.py -G common -i 10.0.10.X 
 
-# It will run enum4linux with a -a flag with the given ip address.
+# It will run enum4linux with -a flag which will do everything with the given ip address.
 python3 ezHTB.py -E -i 10.10.10.X
 
 # It will run nikto with the given ip address. 
