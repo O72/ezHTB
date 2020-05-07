@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 __author__ = "Omar Aljaloud (O72)"
 __license__ = "MIT"
-__version__ = "0.1"
+__version__ = "0.2"
 __email__ = "oaa3024@rit.edu"
 __status__ = "Under Development"
 
@@ -416,22 +416,22 @@ def arg_parser():
     parser = argparse.ArgumentParser(prog='ezHTB.py', usage='%(prog)s [options]')
     options = parser.add_argument_group('Flag options', '')
     options.add_argument('-H', '--hostname', nargs=1,
-                         help='box name: used to create the directory structure')
-    options.add_argument('-i', '--ip', action='store', help='box ip address: target ip address')
-    options.add_argument('-p', '--port', action='store', help='box port: host port')
+                         help='hostname: used to create the directory structure')
+    options.add_argument('-i', '--ip', action='store', help='ip address: host/target ip address')
+    options.add_argument('-p', '--port', action='store', help='port: host/target port')
     options.add_argument('-R', '--reverse', nargs='+',
                          help='reverse type: creating a reverse shell based on the choice of the user')
     options.add_argument('-G', '--gobuster', action='store',
-                         help='gobuster: run gobuster based on the choice of the user')
+                         help='gobuster: run gobuster with several argument. see examples to find which argument '
+                              'is best for you.')
     options.add_argument('-n', '--nmap', action='store',
                          help='nmap: run nmap scan with several argument. see examples to find which argument is best '
-                              'for you')
+                              'for you.')
     options.add_argument('-E', '--enum4linux', action='store_true',
-                         help='enum4linux: run enum4linux with -a which is all (require target ip address).')
+                         help='enum4linux: run enum4linux with -a which will do everything.')
     options.add_argument('-N', '--nikto', action='store_true',
-                         help='nikto: run nikto with -s to force ssl or without (require target ip address).')
-    options.add_argument('-a', '--append', action='store_true', help='Append the ip address and hostname on /etc/hosts '
-                                                                     '(require target ip address and hostname).')
+                         help='nikto: run nikto with -s to force ssl or without.')
+    options.add_argument('-a', '--append', action='store_true', help='Append the ip address and hostname on /etc/hosts')
     options.add_argument('-o', '--out', action='store', help='output file name. ex, -o example.txt')
     options.add_argument('-x', '--https', action='store_true', help='force https')
     options.add_argument('-s', '--ssl', action='store_true', help='force ssl')
@@ -455,7 +455,6 @@ def main():
     ENUM4LINUX_STARTED = False
 
     args = arg_parser()
-    print(args)
 
     print("|+| Creating directories")
     init(args)
